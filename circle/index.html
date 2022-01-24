@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
   <meta charset="UTF-8">
@@ -21,6 +21,7 @@
   <label><input id="borderColorEl" type="color" value="#aaaaaa"> : цвет обводки</label><br>
   <label><input id="borderOpacityEl" type="number" min="0" max="1" step="0.01" value="1"> : прозр. обводки</label><br>
 
+  <a id="downloadEl" href="" download="">Download</a><br>
 
   <canvas id="canvasEl" width="0" height="0"></canvas>
 
@@ -38,6 +39,7 @@
         bgOpacityEl = document.getElementById("bgOpacityEl"),
         borderColorEl = document.getElementById("borderColorEl"),
         borderOpacityEl = document.getElementById("borderOpacityEl"),
+        downloadEl = document.getElementById("downloadEl"),
 
         canvasEl = document.getElementById("canvasEl"),
         ctx = canvasEl.getContext("2d");
@@ -58,12 +60,18 @@
 
       function processFile(file) {
         let destroyed = false;
+        const fileName = file.name;
+        const downloadName = getDownloadName();
         canvasEl.width = 0;
         canvasEl.hidden = 0;
+        downloadEl.href = "";
+        downloadEl.download = downloadName;
 
         let fileUrl = URL.createObjectURL(file);
 
         const img = document.createElement("img");
+
+        let downloadLink = null;
 
         img.onload = () => {
           if (destroyed) return;
@@ -98,6 +106,9 @@
             fileUrl = null;
           }
           img.onload = null;
+
+          downloadEl.href = "";
+          downloadEl.download = "";
 
           realWidthEl.removeEventListener("change", changeListener, false);
           sizeCircleEl.removeEventListener("change", changeListener, false);
@@ -150,6 +161,10 @@
           ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
           ctx.closePath();
           ctx.stroke();
+
+
+          downloadEl.href = canvasEl.toDataURL("image/png");
+
         }
 
         function colorAndOpacity(hexColor, opacity) {
@@ -161,6 +176,12 @@
             opacity = '0' + opacity;
           }
           return '' + hexColor + opacity;
+        }
+
+        function getDownloadName() {
+          const pointIndex = fileName.lastIndexOf(".");
+          if (pointIndex === -1 || pointIndex === 0) return fileName;
+          return fileName.slice(0, pointIndex) + ".png";
         }
 
       }
