@@ -142,56 +142,79 @@
     Work: "Work",
   };
 
-  function useTimerState() {
-
-    const [state, setState] = React.useState({
-      type: TimerStateType.Sleep,
-    });
-
-    const timerState = React.useMemo(() => {
-      switch (state.type) {
-        case TimerStateType.Sleep:
+  function makeUseTimerState(lsPrefix) {
+    const LS_STATE = `${lsPrefix}state`;
+    return useTimerState;
+    function useTimerState() {
+      const initState = React.useMemo(() => {
+        let lsStr = localStorage.getItem(LS_STATE);
+        if (lsStr) {
+          const lsObj = JSON.parse(lsStr);
+          if (lsObj.startDate) {
+            lsObj.startDate = new Date(lsObj.startDate);
+          }
+          return lsObj;
+        } else {
           return {
-            type: state.type,
-            start() {
-              toWorkFromNow();
-            },
+            type: TimerStateType.Sleep,
           };
-        case TimerStateType.Work:
-          return {
-            type: state.type,
-            startDate: state.startDate,
-            stop() {
-              toSleep();
-            },
-            restart() {
-              toWorkFromNow();
-            },
-          };
-        default:
-          throw new Error(`Unknown TimerStateType: ${timerStateType}`);
-      }
+        }
+      }, []);
 
-      function toSleep() {
-        setState({
-          type: TimerStateType.Sleep,
-        });
-      }
+      const [state, setState] = React.useState(initState);
 
-      function toWorkFromNow() {
-        setState({
-          type: TimerStateType.Work,
-          startDate: new Date(),
-        });
-      }
+      const setStateAndSave = React.useCallback(nextState => {
+        setState(nextState);
+        localStorage.setItem(LS_STATE, JSON.stringify(nextState));
+      }, [
+        setState,
+      ])
 
-    }, [
-      state,
-      setState,
-    ]);
+      const timerState = React.useMemo(() => {
+        switch (state.type) {
+          case TimerStateType.Sleep:
+            return {
+              type: state.type,
+              start() {
+                toWorkFromNow();
+              },
+            };
+          case TimerStateType.Work:
+            return {
+              type: state.type,
+              startDate: state.startDate,
+              stop() {
+                toSleep();
+              },
+              restart() {
+                toWorkFromNow();
+              },
+            };
+          default:
+            throw new Error(`Unknown TimerStateType: ${timerStateType}`);
+        }
 
-    return timerState;
+        function toSleep() {
+          setStateAndSave({
+            type: TimerStateType.Sleep,
+          });
+        }
 
+        function toWorkFromNow() {
+          setStateAndSave({
+            type: TimerStateType.Work,
+            startDate: new Date(),
+          });
+        }
+
+      }, [
+        state,
+        setStateAndSave,
+      ]);
+
+      return timerState;
+
+    }
   }
 
   function StdBtn({
@@ -384,6 +407,7 @@
   }
 
   function AppState() {
+    const useTimerState = React.useMemo(() => makeUseTimerState("timer-"), []);
     const nowDate = useNow();
     const timerState = useTimerState();
 
